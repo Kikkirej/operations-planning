@@ -1,0 +1,10 @@
+enabled: false
+image:
+  repository: jaegertracing/all-in-one
+  tag: "2"
+service:
+  grpcPort: 4317
+  httpPort: 4318
+  uiPort: 16686
+storage:
+  size: 5Gi

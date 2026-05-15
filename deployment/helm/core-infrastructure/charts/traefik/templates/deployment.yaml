@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "traefik.fullname" . }}
+  labels:
+    app: {{ include "traefik.fullname" . }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "traefik.fullname" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "traefik.fullname" . }}
+    spec:
+      serviceAccountName: {{ include "traefik.fullname" . }}
+      containers:
+        - name: traefik
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - --providers.kubernetesingress
+            - --providers.kubernetesingress.ingressclass=traefik
+            - --entrypoints.web.address=:80
+            - --entrypoints.web.http.redirections.entrypoint.to=websecure
+            - --entrypoints.websecure.address=:443
+            - --api.dashboard=true
+            - --api.insecure=true
+          ports:
+            - containerPort: 80
+              name: web
+            - containerPort: 443
+              name: websecure
+            - containerPort: 8080
+              name: dashboard
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

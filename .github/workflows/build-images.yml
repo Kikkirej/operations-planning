@@ -1,0 +1,68 @@
+name: Build & Push Service Images
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/kikkirej/ops
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [eureka, config-server, spring-boot-admin]
+      fail-fast: false
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run tests (docker build --target test)
+        run: |
+          docker build \
+            --target test \
+            --cache-from type=gha,scope=${{ matrix.service }}-test \
+            --cache-to   type=gha,scope=${{ matrix.service }}-test,mode=max \
+            -f infrastructure/${{ matrix.service }}/Dockerfile \
+            .
+
+      - name: Compute image tags
+        id: meta
+        run: |
+          REF="${{ github.ref_name }}"
+          IMAGE="${{ env.IMAGE_PREFIX }}/${{ matrix.service }}"
+          TAGS="${IMAGE}:${REF}"
+          if [ "${REF}" = "main" ]; then
+            TAGS="${TAGS},${IMAGE}:latest"
+          fi
+          echo "tags=${TAGS}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push runtime image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: infrastructure/${{ matrix.service }}/Dockerfile
+          target: runtime
+          push: ${{ github.event_name == 'push' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          cache-from: type=gha,scope=${{ matrix.service }}-runtime
+          cache-to:   type=gha,scope=${{ matrix.service }}-runtime,mode=max

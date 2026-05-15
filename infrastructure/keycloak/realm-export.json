@@ -1,0 +1,152 @@
+{
+  "realm": "operations",
+  "enabled": true,
+  "displayName": "Operations Platform",
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": false,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "accessTokenLifespan": 300,
+  "accessTokenLifespanForImplicitFlow": 900,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "offlineSessionIdleTimeout": 2592000,
+  "accessCodeLifespan": 60,
+  "accessCodeLifespanUserAction": 300,
+  "accessCodeLifespanLogin": 1800,
+  "clients": [
+    {
+      "clientId": "eureka-server",
+      "name": "Eureka Service Registry",
+      "description": "Machine-to-machine client for Eureka JWT validation",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "bearerOnly": true,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "secret": "CHANGE_ME_EUREKA_SECRET"
+    },
+    {
+      "clientId": "config-server",
+      "name": "Spring Cloud Config Server",
+      "description": "Machine-to-machine client for Config Server actuator JWT validation",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "bearerOnly": true,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "secret": "CHANGE_ME_CONFIG_SECRET"
+    },
+    {
+      "clientId": "spring-boot-admin",
+      "name": "Spring Boot Admin",
+      "description": "OAuth2 authorization_code client for SBA UI login",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "https://admin.ops.local/*",
+        "http://localhost:8090/*"
+      ],
+      "webOrigins": [
+        "https://admin.ops.local",
+        "http://localhost:8090"
+      ],
+      "secret": "CHANGE_ME_SBA_SECRET",
+      "defaultClientScopes": [
+        "web-origins",
+        "profile",
+        "roles",
+        "email",
+        "openid"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone",
+        "offline_access",
+        "microprofile-jwt"
+      ],
+      "protocolMappers": [
+        {
+          "name": "realm roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "roles",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "sba-admin",
+        "description": "Full access to Spring Boot Admin UI and all monitored service data"
+      },
+      {
+        "name": "platform-user",
+        "description": "General platform user — read-only access to platform services"
+      }
+    ]
+  },
+  "users": [
+    {
+      "username": "admin",
+      "enabled": true,
+      "email": "admin@ops.local",
+      "firstName": "Platform",
+      "lastName": "Admin",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "CHANGE_ME_BEFORE_USE",
+          "temporary": true
+        }
+      ],
+      "requiredActions": ["UPDATE_PASSWORD"],
+      "realmRoles": ["sba-admin", "platform-user"]
+    }
+  ],
+  "requiredActions": [
+    {
+      "alias": "UPDATE_PASSWORD",
+      "name": "Update Password",
+      "providerId": "UPDATE_PASSWORD",
+      "enabled": true,
+      "defaultAction": false,
+      "priority": 30,
+      "config": {}
+    },
+    {
+      "alias": "VERIFY_EMAIL",
+      "name": "Verify Email",
+      "providerId": "VERIFY_EMAIL",
+      "enabled": true,
+      "defaultAction": false,
+      "priority": 50,
+      "config": {}
+    }
+  ],
+  "scopeMappings": [],
+  "clientScopeMappings": {}
+}

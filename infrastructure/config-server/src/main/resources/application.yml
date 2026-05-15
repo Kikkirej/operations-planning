@@ -1,0 +1,42 @@
+spring:
+  application:
+    name: config-server
+  cloud:
+    config:
+      server:
+        native:
+          search-locations: file:/config
+    bus:
+      id: config-server
+      destination: springCloudBus
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:9092}
+  security:
+    user:
+      name: ${CONFIG_SERVER_USERNAME:config}
+      password: ${CONFIG_SERVER_PASSWORD}
+  # Keycloak JWT validation applies only to actuator endpoints accessed by other services.
+  # Config fetch endpoints use HTTP Basic auth to avoid a bootstrapping circular dependency
+  # (services need config before they can obtain a Keycloak token).
+  # See: plan.md Complexity Tracking — §VI exception, entry "Config Server Basic Auth".
+  oauth2:
+    resourceserver:
+      jwt:
+        issuer-uri: ${KEYCLOAK_URL:http://keycloak:8080}/realms/operations
+
+server:
+  port: 8888
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://eureka:8761/eureka/}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,busrefresh,env
+  endpoint:
+    health:
+      show-details: always

@@ -1,0 +1,45 @@
+{{- if .Values.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "jaeger.fullname" . }}
+  labels:
+    app: {{ include "jaeger.fullname" . }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ include "jaeger.fullname" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "jaeger.fullname" . }}
+    spec:
+      containers:
+        - name: jaeger
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 4317
+              name: otlp-grpc
+            - containerPort: 4318
+              name: otlp-http
+            - containerPort: 16686
+              name: ui
+          env:
+            - name: SPAN_STORAGE_TYPE
+              value: badger
+            - name: BADGER_EPHEMERAL
+              value: "false"
+            - name: BADGER_DIRECTORY_VALUE
+              value: /badger/data
+            - name: BADGER_DIRECTORY_KEY
+              value: /badger/key
+          volumeMounts:
+            - name: badger-data
+              mountPath: /badger
+      volumes:
+        - name: badger-data
+          persistentVolumeClaim:
+            claimName: {{ include "jaeger.fullname" . }}-data
+{{- end }}

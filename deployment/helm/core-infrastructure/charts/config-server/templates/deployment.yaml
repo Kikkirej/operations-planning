@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "config-server.fullname" . }}
+  labels:
+    app: {{ include "config-server.fullname" . }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "config-server.fullname" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "config-server.fullname" . }}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+      containers:
+        - name: config-server
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.service.port }}
+          env:
+            - name: CONFIG_SERVER_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "config-server.fullname" . }}-secrets
+                  key: username
+            - name: CONFIG_SERVER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "config-server.fullname" . }}-secrets
+                  key: password
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: "kafka:9092"
+            - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+              value: "http://eureka:8761/eureka/"
+          volumeMounts:
+            - name: config-repo
+              mountPath: /config
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: {{ .Values.service.port }}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: config-repo
+          persistentVolumeClaim:
+            claimName: {{ include "config-server.fullname" . }}-config-repo

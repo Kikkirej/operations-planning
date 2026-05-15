@@ -1,0 +1,284 @@
+networks:
+  infra-net:
+    driver: bridge
+  app-net:
+    driver: bridge
+
+volumes:
+  keycloak-postgres-data:
+  kafka-data:
+  opensearch-data:
+
+services:
+
+  # ── Keycloak PostgreSQL ──────────────────────────────────────────────────────
+  keycloak-postgres:
+    image: postgres:17-alpine
+    networks: [infra-net]
+    volumes:
+      - keycloak-postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+  # ── Keycloak ─────────────────────────────────────────────────────────────────
+  keycloak:
+    image: keycloak/keycloak:26.6
+    networks: [infra-net, app-net]
+    depends_on:
+      keycloak-postgres:
+        condition: service_healthy
+    command: ["start-dev", "--import-realm"]
+    volumes:
+      - ../../infrastructure/keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-postgres:5432/${POSTGRES_DB}
+      KC_DB_USERNAME: ${KC_DB_USERNAME}
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KC_PROXY: edge
+      KC_HOSTNAME_STRICT: "false"
+      KC_HTTP_ENABLED: "true"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.keycloak.rule=Host(`auth.ops.local`)"
+      - "traefik.http.routers.keycloak.entrypoints=websecure"
+      - "traefik.http.routers.keycloak.tls=true"
+      - "traefik.http.services.keycloak.loadbalancer.server.port=8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/health/ready || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 90s
+    restart: unless-stopped
+
+  # ── Eureka ────────────────────────────────────────────────────────────────────
+  eureka:
+    build:
+      context: ../..
+      dockerfile: infrastructure/eureka/Dockerfile
+      target: runtime
+    networks: [infra-net, app-net]
+    ports:
+      - "8761:8761"
+    labels:
+      - "traefik.enable=false"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8761/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+  # ── Traefik ───────────────────────────────────────────────────────────────────
+  traefik:
+    image: traefik:v3
+    networks: [app-net]
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ../../infrastructure/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ../../infrastructure/traefik/dynamic:/etc/traefik/dynamic:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/ping || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  # ── Kafka ─────────────────────────────────────────────────────────────────────
+  kafka:
+    image: apache/kafka:4.1.2
+    networks: [infra-net, app-net]
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    environment:
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_NODE_ID: "1"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list > /dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  kafka-init:
+    image: apache/kafka:4.1.2
+    networks: [infra-net]
+    depends_on:
+      kafka:
+        condition: service_healthy
+    volumes:
+      - ../../infrastructure/kafka/topics.yml:/topics.yml:ro
+      - ../../infrastructure/kafka/init-topics.sh:/init-topics.sh:ro
+    command: ["sh", "/init-topics.sh"]
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_REPLICATION_FACTOR: "1"
+    restart: "no"
+
+  # ── Config Server ─────────────────────────────────────────────────────────────
+  config-server:
+    build:
+      context: ../..
+      dockerfile: infrastructure/config-server/Dockerfile
+      target: runtime
+    networks: [infra-net, app-net]
+    depends_on:
+      eureka:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    volumes:
+      - ${CONFIG_REPO_PATH}:/config:ro
+    environment:
+      SPRING_SECURITY_USER_NAME: ${CONFIG_SERVER_USERNAME}
+      SPRING_SECURITY_USER_PASSWORD: ${CONFIG_SERVER_PASSWORD}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka:8761/eureka/
+      KEYCLOAK_URL: ${KEYCLOAK_URL}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.config-server.rule=Host(`config.ops.local`)"
+      - "traefik.http.routers.config-server.entrypoints=websecure"
+      - "traefik.http.routers.config-server.tls=true"
+      - "traefik.http.services.config-server.loadbalancer.server.port=8888"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8888/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+  # ── Spring Boot Admin ─────────────────────────────────────────────────────────
+  spring-boot-admin:
+    build:
+      context: ../..
+      dockerfile: infrastructure/spring-boot-admin/Dockerfile
+      target: runtime
+    networks: [infra-net, app-net]
+    depends_on:
+      eureka:
+        condition: service_healthy
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka:8761/eureka/
+      KEYCLOAK_URL: ${KEYCLOAK_URL}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_SBA_CLIENT_SECRET:-change-me}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.spring-boot-admin.rule=Host(`admin.ops.local`)"
+      - "traefik.http.routers.spring-boot-admin.entrypoints=websecure"
+      - "traefik.http.routers.spring-boot-admin.tls=true"
+      - "traefik.http.services.spring-boot-admin.loadbalancer.server.port=8090"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8090/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+  # ── Observability profile ─────────────────────────────────────────────────────
+
+  jaeger:
+    image: jaegertracing/all-in-one:2
+    profiles: [observability]
+    networks: [app-net]
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+      - "16686:16686"
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:16686/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
+  opensearch:
+    image: opensearchproject/opensearch:2
+    profiles: [observability]
+    networks: [app-net]
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
+    environment:
+      discovery.type: single-node
+      DISABLE_SECURITY_PLUGIN: "true"
+      OPENSEARCH_JAVA_OPTS: "-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    restart: unless-stopped
+
+  logstash:
+    image: opensearchproject/logstash-oss-with-opensearch-output-plugin:8.9.0
+    profiles: [observability]
+    networks: [app-net]
+    depends_on:
+      opensearch:
+        condition: service_healthy
+    volumes:
+      - ../../infrastructure/logstash/pipeline:/usr/share/logstash/pipeline:ro
+    ports:
+      - "5044:5044"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9600/_node/stats || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:2
+    profiles: [observability]
+    networks: [app-net]
+    depends_on:
+      opensearch:
+        condition: service_healthy
+    environment:
+      OPENSEARCH_HOSTS: '["http://opensearch:9200"]'
+      DISABLE_SECURITY_DASHBOARDS_PLUGIN: "true"
+    ports:
+      - "5601:5601"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:5601/api/status || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped

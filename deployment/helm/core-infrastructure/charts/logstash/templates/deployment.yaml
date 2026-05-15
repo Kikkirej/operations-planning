@@ -1,0 +1,33 @@
+{{- if .Values.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "logstash.fullname" . }}
+  labels:
+    app: {{ include "logstash.fullname" . }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ include "logstash.fullname" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "logstash.fullname" . }}
+    spec:
+      containers:
+        - name: logstash
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: {{ .Values.service.port }}
+              name: beats
+          volumeMounts:
+            - name: pipeline-config
+              mountPath: /usr/share/logstash/pipeline
+              readOnly: true
+      volumes:
+        - name: pipeline-config
+          configMap:
+            name: {{ include "logstash.fullname" . }}-pipeline
+{{- end }}

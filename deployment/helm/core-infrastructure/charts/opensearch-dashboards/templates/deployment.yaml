@@ -1,0 +1,34 @@
+{{- if .Values.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "opensearch-dashboards.fullname" . }}
+  labels:
+    app: {{ include "opensearch-dashboards.fullname" . }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ include "opensearch-dashboards.fullname" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "opensearch-dashboards.fullname" . }}
+    spec:
+      containers:
+        - name: opensearch-dashboards
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: {{ .Values.service.port }}
+              name: http
+          env:
+            - name: OPENSEARCH_HOSTS
+              value: '["http://opensearch:9200"]'
+          readinessProbe:
+            httpGet:
+              path: /api/status
+              port: {{ .Values.service.port }}
+            initialDelaySeconds: 60
+            periodSeconds: 15
+{{- end }}

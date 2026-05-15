@@ -1,0 +1,14 @@
+## Observability profile overrides — enables all monitoring/tracing services
+## Usage: helm install core-infrastructure . -f values.observability.yaml
+
+jaeger:
+  enabled: true
+
+opensearch:
+  enabled: true
+
+logstash:
+  enabled: true
+
+opensearch-dashboards:
+  enabled: true
