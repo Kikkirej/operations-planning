@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "spring-cloud-bus-refresh",
+  "title": "Spring Cloud Bus Refresh Event",
+  "description": "Event published to the 'springCloudBus' Kafka topic to trigger a configuration refresh across all subscribed services. Published by Config Server via POST /actuator/busrefresh.",
+  "type": "object",
+  "required": ["type", "timestamp", "originService"],
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "RefreshRemoteApplicationEvent",
+      "description": "Spring Cloud Bus event type discriminator."
+    },
+    "timestamp": {
+      "type": "integer",
+      "description": "Unix epoch milliseconds when the event was published."
+    },
+    "originService": {
+      "type": "string",
+      "description": "Eureka appName of the service that triggered the refresh (typically 'config-server')."
+    },
+    "destinationService": {
+      "type": "string",
+      "description": "Target Eureka appName pattern. '**' broadcasts to all subscribers.",
+      "default": "**"
+    },
+    "id": {
+      "type": "string",
+      "description": "UUID identifying this specific event instance."
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "type": "RefreshRemoteApplicationEvent",
+      "timestamp": 1747267200000,
+      "originService": "config-server:192.168.1.10:8888",
+      "destinationService": "**",
+      "id": "a3f1c2d4-e5b6-7890-abcd-ef1234567890"
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+# Kafka Topic Declarations
+# All topics are created by init-topics.sh before any producer/consumer connects.
+# Auto-creation is DISABLED on the broker (KAFKA_AUTO_CREATE_TOPICS_ENABLE=false).
+# Add new topics here; they will be created on next platform startup.
+#
+# Fields:
+#   name:           kebab-case topic name (globally unique)
+#   partitions:     number of partitions (Compose: 1–3; Kubernetes: 3+)
+#   retentionMs:    retention in milliseconds (-1 = infinite)
+#   cleanupPolicy:  delete | compact
+#   offsetReset:    earliest | latest (informational — set per consumer group)
+#   replicationFactor: overrides KAFKA_REPLICATION_FACTOR env var for this topic
+#   purpose:        human-readable description of the topic's use
+
+topics:
+  # Spring Cloud Bus config-refresh broadcast (internal infrastructure topic)
+  - name: springCloudBus
+    partitions: 3
+    retentionMs: 3600000    # 1 hour — refresh events are ephemeral
+    cleanupPolicy: delete
+    offsetReset: latest
+    purpose: "Spring Cloud Bus config-refresh broadcast (RefreshRemoteApplicationEvent)"
+
+  # ── Application event topics ───────────────────────────────────────────────
+  # Add per-service domain event topics below as features are implemented.
+  # Follow the pattern:
+  #
+  # - name: <domain>-events
+  #   partitions: 3
+  #   retentionMs: 604800000   # 7 days — domain events have longer retention
+  #   cleanupPolicy: delete
+  #   offsetReset: earliest    # consumers must replay from beginning on restart
+  #   purpose: "Domain events for <service>"

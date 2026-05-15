@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "traefik.fullname" . }}
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    app: {{ include "traefik.fullname" . }}
+  ports:
+    - port: {{ .Values.service.httpPort }}
+      targetPort: 80
+      name: web
+    - port: {{ .Values.service.httpsPort }}
+      targetPort: 443
+      name: websecure

@@ -1,0 +1,6 @@
+apiVersion: v2
+name: opensearch-dashboards
+description: OpenSearch Dashboards UI (observability profile)
+type: application
+version: 0.1.0
+appVersion: "2"

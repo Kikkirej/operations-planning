@@ -1,0 +1,16 @@
+.git/
+.github/
+.gradle/
+.idea/
+.specify/
+.claude/
+specs/
+docs/
+contracts/
+README.md
+CLAUDE.md
+*.md
+*.log
+.env
+.env.example
+deployment/

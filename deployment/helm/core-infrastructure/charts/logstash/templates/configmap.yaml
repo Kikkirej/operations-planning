@@ -1,0 +1,26 @@
+{{- if .Values.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "logstash.fullname" . }}-pipeline
+data:
+  logstash.conf: |
+    input {
+      beats {
+        port => 5044
+      }
+    }
+    filter {
+      if [fields][service] {
+        mutate { add_field => { "[@metadata][index_prefix]" => "ops-logs" } }
+      }
+    }
+    output {
+      opensearch {
+        hosts => ["opensearch:9200"]
+        index => "ops-logs-%{+YYYY.MM.dd}"
+        ssl => false
+        ssl_certificate_verification => false
+      }
+    }
+{{- end }}

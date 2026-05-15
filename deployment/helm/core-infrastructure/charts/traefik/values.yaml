@@ -1,0 +1,16 @@
+replicaCount: 1
+image:
+  repository: traefik
+  tag: "v3"
+  pullPolicy: IfNotPresent
+service:
+  type: LoadBalancer
+  httpPort: 80
+  httpsPort: 443
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi

@@ -1,0 +1,8 @@
+enabled: false
+image:
+  repository: opensearchproject/opensearch
+  tag: "2"
+service:
+  port: 9200
+storage:
+  size: 20Gi

@@ -1,0 +1,16 @@
+replicaCount: 1
+image:
+  repository: quay.io/keycloak/keycloak
+  tag: "26.0"
+  pullPolicy: IfNotPresent
+service:
+  port: 8080
+resources:
+  requests:
+    cpu: 500m
+    memory: 512Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+postgres:
+  storageSize: 5Gi

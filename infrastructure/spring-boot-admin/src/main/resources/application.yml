@@ -1,0 +1,37 @@
+spring:
+  application:
+    name: spring-boot-admin
+  security:
+    oauth2:
+      client:
+        registration:
+          keycloak:
+            client-id: spring-boot-admin
+            client-secret: ${KEYCLOAK_CLIENT_SECRET}
+            scope: openid,profile,email,roles
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+        provider:
+          keycloak:
+            issuer-uri: ${KEYCLOAK_URL:http://keycloak:8080}/realms/operations
+
+server:
+  port: 8090
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://eureka:8761/eureka/}
+  instance:
+    metadata-map:
+      user.name: ${SPRING_BOOT_ADMIN_CLIENT_USERNAME:actuator}
+      user.password: ${SPRING_BOOT_ADMIN_CLIENT_PASSWORD:actuator}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always

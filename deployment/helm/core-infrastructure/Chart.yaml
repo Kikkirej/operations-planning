@@ -1,0 +1,57 @@
+apiVersion: v2
+name: core-infrastructure
+description: Operations Platform — full infrastructure stack
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+
+dependencies:
+  - name: eureka
+    version: "0.1.0"
+    repository: "file://charts/eureka"
+    condition: eureka.enabled
+
+  - name: config-server
+    version: "0.1.0"
+    repository: "file://charts/config-server"
+    condition: config-server.enabled
+
+  - name: keycloak
+    version: "0.1.0"
+    repository: "file://charts/keycloak"
+    condition: keycloak.enabled
+
+  - name: kafka
+    version: "0.1.0"
+    repository: "file://charts/kafka"
+    condition: kafka.enabled
+
+  - name: traefik
+    version: "0.1.0"
+    repository: "file://charts/traefik"
+    condition: traefik.enabled
+
+  - name: spring-boot-admin
+    version: "0.1.0"
+    repository: "file://charts/spring-boot-admin"
+    condition: spring-boot-admin.enabled
+
+  - name: jaeger
+    version: "0.1.0"
+    repository: "file://charts/jaeger"
+    condition: jaeger.enabled
+
+  - name: opensearch
+    version: "0.1.0"
+    repository: "file://charts/opensearch"
+    condition: opensearch.enabled
+
+  - name: logstash
+    version: "0.1.0"
+    repository: "file://charts/logstash"
+    condition: logstash.enabled
+
+  - name: opensearch-dashboards
+    version: "0.1.0"
+    repository: "file://charts/opensearch-dashboards"
+    condition: opensearch-dashboards.enabled

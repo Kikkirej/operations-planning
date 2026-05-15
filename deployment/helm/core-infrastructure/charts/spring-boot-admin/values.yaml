@@ -1,0 +1,14 @@
+replicaCount: 1
+image:
+  repository: ghcr.io/kikkirej/ops/spring-boot-admin
+  tag: latest
+  pullPolicy: IfNotPresent
+service:
+  port: 8090
+resources:
+  requests:
+    cpu: 200m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi

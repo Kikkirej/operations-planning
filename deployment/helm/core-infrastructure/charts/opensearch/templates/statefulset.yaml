@@ -1,0 +1,54 @@
+{{- if .Values.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "opensearch.fullname" . }}
+  labels:
+    app: {{ include "opensearch.fullname" . }}
+spec:
+  serviceName: {{ include "opensearch.fullname" . }}
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ include "opensearch.fullname" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "opensearch.fullname" . }}
+    spec:
+      initContainers:
+        - name: sysctl
+          image: busybox
+          command: ["sysctl", "-w", "vm.max_map_count=262144"]
+          securityContext:
+            privileged: true
+      containers:
+        - name: opensearch
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: {{ .Values.service.port }}
+              name: http
+          env:
+            - name: DISABLE_SECURITY_PLUGIN
+              value: "true"
+            - name: discovery.type
+              value: single-node
+          volumeMounts:
+            - name: opensearch-data
+              mountPath: /usr/share/opensearch/data
+          readinessProbe:
+            httpGet:
+              path: /_cluster/health
+              port: {{ .Values.service.port }}
+            initialDelaySeconds: 60
+            periodSeconds: 15
+  volumeClaimTemplates:
+    - metadata:
+        name: opensearch-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.storage.size }}
+{{- end }}

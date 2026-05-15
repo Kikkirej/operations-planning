@@ -1,0 +1,33 @@
+# Gradle
+.gradle/
+build/
+out/
+*.class
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+
+# Kotlin / IntelliJ
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# Environment
+.env
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Docker secrets
+*.pem
+*.key
+*.crt
+
+# Helm
+charts/*.tgz

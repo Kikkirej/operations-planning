@@ -1,0 +1,6 @@
+enabled: false
+image:
+  repository: opensearchproject/logstash-oss-with-opensearch-output-plugin
+  tag: "8"
+service:
+  port: 5044
