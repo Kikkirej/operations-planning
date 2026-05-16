@@ -4,6 +4,8 @@ WORKDIR /workspace
 COPY gradle/ gradle/
 COPY build.gradle.kts settings.gradle.kts ./
 COPY infrastructure/config-server/build.gradle.kts infrastructure/config-server/build.gradle.kts
+# Resolve and cache all dependencies before copying source — keeps this layer cached when only src changes
+RUN gradle :infrastructure:config-server:dependencies --no-daemon
 COPY infrastructure/config-server/src infrastructure/config-server/src
 RUN gradle :infrastructure:config-server:bootJar --no-daemon --parallel
 

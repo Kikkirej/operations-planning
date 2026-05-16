@@ -4,6 +4,8 @@ WORKDIR /workspace
 COPY gradle/ gradle/
 COPY build.gradle.kts settings.gradle.kts ./
 COPY infrastructure/spring-boot-admin/build.gradle.kts infrastructure/spring-boot-admin/build.gradle.kts
+# Resolve and cache all dependencies before copying source — keeps this layer cached when only src changes
+RUN gradle :infrastructure:spring-boot-admin:dependencies --no-daemon
 COPY infrastructure/spring-boot-admin/src infrastructure/spring-boot-admin/src
 RUN gradle :infrastructure:spring-boot-admin:bootJar --no-daemon --parallel
 

@@ -4,6 +4,8 @@ WORKDIR /workspace
 COPY gradle/ gradle/
 COPY build.gradle.kts settings.gradle.kts ./
 COPY infrastructure/eureka/build.gradle.kts infrastructure/eureka/build.gradle.kts
+# Resolve and cache all dependencies before copying source — keeps this layer cached when only src changes
+RUN gradle :infrastructure:eureka:dependencies --no-daemon
 COPY infrastructure/eureka/src infrastructure/eureka/src
 RUN gradle :infrastructure:eureka:bootJar --no-daemon --parallel
 
