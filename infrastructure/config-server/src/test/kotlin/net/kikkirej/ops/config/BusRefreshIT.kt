@@ -10,6 +10,8 @@ import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
 import org.springframework.http.RequestEntity
+import org.springframework.test.context.DynamicPropertyRegistry
+import org.springframework.test.context.DynamicPropertySource
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.client.exchange
 import org.testcontainers.containers.KafkaContainer
@@ -37,6 +39,12 @@ class BusRefreshIT {
         @Container
         @JvmStatic
         val kafka = KafkaContainer(DockerImageName.parse("apache/kafka:3.9.0"))
+
+        @DynamicPropertySource
+        @JvmStatic
+        fun kafkaProperties(registry: DynamicPropertyRegistry) {
+            registry.add("spring.kafka.bootstrap-servers") { kafka.bootstrapServers }
+        }
     }
 
     @LocalServerPort
@@ -54,7 +62,6 @@ class BusRefreshIT {
 
     @Test
     fun `busrefresh endpoint accepts POST with Basic auth`() {
-        System.setProperty("spring.kafka.bootstrap-servers", kafka.bootstrapServers)
         System.setProperty("config.repo.path", configDir.absolutePath)
 
         val req = RequestEntity<Void>(basicAuth(), HttpMethod.POST, URI("http://localhost:$port/actuator/busrefresh"))

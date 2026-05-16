@@ -4,9 +4,19 @@
 
 **Created**: 2026-05-15
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: User description: "two databases are part of it. 1 postgres database for all relational data. each table is owned by a service. Entities can be defined by clear IDs. (UUIDs) Additionally a general neo4j database exists, which manages relationships between entities. neo4j just concentrates on IDs and relationships. no other data saved."
+
+## Clarifications
+
+### Session 2026-05-15
+
+- Q: Who is responsible for detecting and cleaning up orphaned Neo4j nodes when a PostgreSQL entity is deleted but the graph node is not removed? → A: Purely service responsibility — no platform-level cleanup mechanism; services handle their own sync.
+- Q: Should Neo4j relationships always be directed, always undirected, or caller-decided per relationship? → A: Both allowed — the creating service specifies direction (directed or undirected) per relationship at creation time.
+- Q: What level of observability should this feature provision for PostgreSQL and Neo4j? → A: Health checks + structured logs forwarded to the existing OpenSearch/Logstash stack.
+- Q: Does this feature ship a PostgreSQL bootstrap script, or is the database handed to services completely empty? → A: Minimal init script — creates a shared `app` role with LOGIN that services derive from; each service still creates its own schema and grants.
+- Q: What is the concrete latency target for single-record PostgreSQL and single-hop Neo4j operations? → A: p99 < 100 ms for single-record ops.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -129,11 +139,14 @@ within 60 seconds.
   exists? The operation MUST be idempotent — no duplicate node is created, no error is
   returned.
 - What happens when a relationship is created referencing a UUID that has no
-  corresponding node? Neo4j MUST reject the operation with a clear error; dangling
-  relationships MUST NOT be created.
+  corresponding node? The service MUST reject the operation before issuing any
+  Cypher query; dangling relationships MUST NOT be created. (Neo4j does not natively
+  prevent relationship creation to non-existent nodes — enforcement is at the application
+  layer.)
 - What happens when an entity is deleted from PostgreSQL but its Neo4j node is not
-  removed (partial failure)? The platform MUST expose a mechanism to detect and clean
-  up orphaned Neo4j nodes whose UUIDs no longer have a corresponding PostgreSQL record.
+  removed (partial failure)? Each service is responsible for detecting and reconciling
+  such orphaned Neo4j nodes; the platform does not provide a built-in cleanup or
+  reconciliation mechanism.
 - What happens when PostgreSQL is unreachable at service startup? Services MUST fail
   fast with a clear database connection error; they MUST NOT start with empty or
   default in-memory state.
@@ -168,8 +181,10 @@ within 60 seconds.
 - **FR-008**: Neo4j relationship operations MUST be idempotent for node creation; a
   duplicate node registration for an existing UUID MUST succeed without creating
   duplicates.
-- **FR-009**: Creating a relationship between two UUIDs MUST be rejected if either UUID
-  does not exist as a node in Neo4j; dangling relationships MUST NOT be created.
+- **FR-009**: Creating a relationship between two UUIDs MUST be rejected by the service
+  if either UUID does not exist as a node in Neo4j; dangling relationships MUST NOT be
+  created. Enforcement is at the application (service) level — Neo4j does not natively
+  prevent relationship creation to non-existent nodes.
 - **FR-010**: Both PostgreSQL (application data) and Neo4j MUST be included in the
   Docker Compose file under `deployment/compose/` and have Helm chart definitions under
   `deployment/helm/`.
@@ -184,6 +199,15 @@ within 60 seconds.
   exist under `docs/infrastructure/<component-name>/` and MUST cover purpose,
   configuration reference, schema ownership model, startup/shutdown, and
   troubleshooting.
+- **FR-015**: Both PostgreSQL (application data) and Neo4j MUST expose liveness and
+  readiness health checks in both Compose and Helm configurations. Container log output
+  for both databases MUST be forwarded to the existing Logstash/OpenSearch stack using
+  the same log driver and index conventions as other platform services.
+- **FR-016**: The PostgreSQL (application data) instance MUST be initialised with a
+  minimal bootstrap SQL script that creates a shared `app` role with LOGIN privileges.
+  Each service is responsible for creating its own schema and granting schema-scoped
+  permissions to a service-specific role derived from `app`; no service-level schemas
+  are pre-created by this feature.
 
 ### Key Entities
 
@@ -197,9 +221,10 @@ within 60 seconds.
   cross-store identity contract.
 - **Node (Neo4j)**: A graph node representing one entity, identified solely by its UUID;
   no attribute data beyond the UUID is stored on the node.
-- **Relationship (Neo4j)**: A directed or undirected typed edge between two UUID nodes
-  in Neo4j, representing a cross-service association (e.g., `BELONGS_TO`,
-  `REFERENCES`); carries no payload data.
+- **Relationship (Neo4j)**: A typed edge between two UUID nodes in Neo4j representing
+  a cross-service association (e.g., `BELONGS_TO`, `REFERENCES`); carries no payload
+  data. Directionality (directed or undirected) is specified by the creating service
+  per relationship at creation time.
 - **Application PostgreSQL**: The shared relational database dedicated to application
   service data; distinct from the Keycloak-PostgreSQL instance used by the identity
   provider.
@@ -209,11 +234,15 @@ within 60 seconds.
 ### Measurable Outcomes
 
 - **SC-001**: A service can create, read, update, and delete records in its own
-  PostgreSQL schema with no awareness of other services' schemas; operations complete
-  within normal database response times.
+  PostgreSQL schema with no awareness of other services' schemas; single-record
+  operations complete at p99 < 100 ms under expected load. *(Functional isolation is
+  verified by CI integration tests; p99 latency target is an operational target validated
+  via manual load testing, not asserted in automated CI.)*
 - **SC-002**: Cross-service entity relationships can be queried from Neo4j using only
-  entity UUIDs, returning the correct relationship type and direction within normal
-  graph query response times.
+  entity UUIDs, returning the correct relationship type and direction; single-hop
+  graph queries complete at p99 < 100 ms under expected load. *(Functional correctness
+  is verified by CI integration tests; p99 latency target is an operational target
+  validated via manual load testing, not asserted in automated CI.)*
 - **SC-003**: Deleting an entity from PostgreSQL and removing its Neo4j node leaves
   zero orphaned relationship edges referencing that UUID in the graph.
 - **SC-004**: Both PostgreSQL (application data) and Neo4j start successfully and are
@@ -224,6 +253,9 @@ within 60 seconds.
   only its UUID property and no other fields.
 - **SC-007**: Data in both databases survives a container/pod restart without loss;
   verified by writing records before restart and reading them after.
+- **SC-008**: Both PostgreSQL and Neo4j logs are visible in OpenSearch Dashboards within
+  60 seconds of generation; liveness and readiness probes pass continuously once the
+  stack is healthy.
 
 ## Assumptions
 
@@ -231,9 +263,10 @@ within 60 seconds.
   instance defined in the core infrastructure feature; they run as distinct services
   with distinct volumes and credentials.
 - Service-owned schema isolation is enforced via PostgreSQL schemas (one schema per
-  service) and dedicated PostgreSQL roles with schema-scoped GRANT permissions. Schema
-  provisioning (CREATE SCHEMA, GRANT) is the responsibility of each service's database
-  migration on startup.
+  service) and dedicated PostgreSQL roles with schema-scoped GRANT permissions. This
+  feature ships a bootstrap init script that creates a shared `app` role with LOGIN;
+  each service's migration is responsible for CREATE SCHEMA and GRANT on startup,
+  using a service-specific role derived from `app`.
 - Neo4j runs in Community Edition for local development and Kubernetes; Enterprise
   Edition features (clustering, advanced security plugins) are out of scope.
 - All Neo4j interactions use the Bolt protocol; the Neo4j Browser UI is available for
@@ -252,3 +285,8 @@ within 60 seconds.
   contract, not the synchronisation mechanism.
 - Both databases are placed on the same internal platform network as all other
   infrastructure services; no additional network segment is required.
+- Log forwarding for both databases relies on the Docker default JSON logging driver
+  used by all platform services. Logstash collects container logs via Docker socket;
+  the Logstash pipeline configuration is established by the core infrastructure feature
+  (feature-001). No database-specific Logstash pipeline is added by this feature; SC-008
+  log visibility depends on the observability Compose profile being active.

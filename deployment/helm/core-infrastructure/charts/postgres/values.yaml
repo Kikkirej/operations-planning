@@ -1,0 +1,22 @@
+image:
+  repository: postgres
+  tag: 17-alpine
+  pullPolicy: IfNotPresent
+
+auth:
+  database: app_db
+  username: postgres
+  existingSecret: ""
+  secretKey: POSTGRES_PASSWORD
+
+storage:
+  size: 10Gi
+  storageClass: ""
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi

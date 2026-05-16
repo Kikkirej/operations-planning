@@ -143,3 +143,48 @@ opensearch-dashboards:
     tag: "2"
   service:
     port: 5601
+
+postgres:
+  enabled: true
+  image:
+    repository: postgres
+    tag: 17-alpine
+    pullPolicy: IfNotPresent
+  auth:
+    database: app_db
+    username: postgres
+    existingSecret: ""
+    secretKey: POSTGRES_PASSWORD
+  storage:
+    size: 10Gi
+    storageClass: ""
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+neo4j:
+  enabled: true
+  image:
+    repository: neo4j
+    tag: 5-community
+    pullPolicy: IfNotPresent
+  auth:
+    existingSecret: ""
+    secretKey: NEO4J_PASSWORD
+  storage:
+    size: 20Gi
+    storageClass: ""
+  boltPort: 7687
+  browserPort: 7474
+  browserEnabled: false
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi

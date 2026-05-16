@@ -1,0 +1,24 @@
+image:
+  repository: neo4j
+  tag: 5-community
+  pullPolicy: IfNotPresent
+
+auth:
+  existingSecret: ""
+  secretKey: NEO4J_PASSWORD
+
+storage:
+  size: 20Gi
+  storageClass: ""
+
+boltPort: 7687
+browserPort: 7474
+browserEnabled: false
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 512Mi
+  limits:
+    cpu: "1"
+    memory: 1Gi
