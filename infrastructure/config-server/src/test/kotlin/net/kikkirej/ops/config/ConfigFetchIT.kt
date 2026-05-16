@@ -11,7 +11,6 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.RequestEntity
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.client.exchange
-import org.testcontainers.junit.jupiter.Testcontainers
 import java.io.File
 import java.net.URI
 import java.util.Base64
@@ -27,7 +26,6 @@ import java.util.Base64
         "eureka.client.enabled=false"
     ]
 )
-@Testcontainers
 class ConfigFetchIT {
 
     @LocalServerPort
