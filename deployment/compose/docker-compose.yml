@@ -48,7 +48,8 @@ services:
       KC_DB_PASSWORD: ${KC_DB_PASSWORD}
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
-      KC_PROXY: edge
+      KC_PROXY_HEADERS: xforwarded
+      KC_HOSTNAME: auth.ops.local
       KC_HOSTNAME_STRICT: "false"
       KC_HTTP_ENABLED: "true"
     labels:
@@ -56,6 +57,8 @@ services:
       - "traefik.http.routers.keycloak.rule=Host(`auth.ops.local`)"
       - "traefik.http.routers.keycloak.entrypoints=websecure"
       - "traefik.http.routers.keycloak.tls=true"
+      - "traefik.http.routers.keycloak.middlewares=keycloak-proto"
+      - "traefik.http.middlewares.keycloak-proto.headers.customrequestheaders.X-Forwarded-Proto=https"
       - "traefik.http.services.keycloak.loadbalancer.server.port=8080"
     healthcheck:
       # keycloak/keycloak:26.x is ubi-micro (no curl/wget); start-dev disables the management
