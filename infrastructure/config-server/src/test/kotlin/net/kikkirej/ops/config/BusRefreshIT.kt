@@ -19,6 +19,7 @@ import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import org.testcontainers.kafka.KafkaContainer
 import java.io.File
+import java.time.Duration
 import java.net.URI
 import java.util.Base64
 
@@ -40,6 +41,7 @@ class BusRefreshIT {
         @Container
         @JvmStatic
         val kafka = KafkaContainer("apache/kafka:3.9.0")
+                .withStartupTimeout(Duration.ofMinutes(2))
 
         @DynamicPropertySource
         @JvmStatic
