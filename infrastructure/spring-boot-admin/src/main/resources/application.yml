@@ -13,7 +13,13 @@ spring:
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
         provider:
           keycloak:
-            issuer-uri: ${KEYCLOAK_URL:http://keycloak:8080}/realms/operations
+            # authorization-uri uses the public URL so browser redirects work from outside Docker.
+            # token/jwks/userinfo use the internal URL to avoid split-DNS startup failures.
+            authorization-uri: ${KEYCLOAK_PUBLIC_URL:https://auth.ops.local}/realms/operations/protocol/openid-connect/auth
+            token-uri: ${KEYCLOAK_URL:http://keycloak:8080}/realms/operations/protocol/openid-connect/token
+            user-info-uri: ${KEYCLOAK_URL:http://keycloak:8080}/realms/operations/protocol/openid-connect/userinfo
+            jwk-set-uri: ${KEYCLOAK_URL:http://keycloak:8080}/realms/operations/protocol/openid-connect/certs
+            user-name-attribute: preferred_username
 
 server:
   port: 8090
