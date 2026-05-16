@@ -18,6 +18,7 @@ dependencyManagement {
 
 dependencies {
     implementation(libs.spring.boot.admin.starter.server)
+    implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.cloud:spring-cloud-starter-netflix-eureka-client")
     implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
     implementation("org.springframework.boot:spring-boot-starter-security")
@@ -32,5 +33,12 @@ dependencies {
 }
 
 tasks.withType<Test> {
-    useJUnitPlatform()
+    useJUnitPlatform {
+        val skipDockerTests = System.getenv("SKIP_DOCKER_TESTS") == "true"
+        val onlyIntegration = project.hasProperty("onlyIntegration")
+        when {
+            onlyIntegration -> includeTags("integration")
+            skipDockerTests -> excludeTags("integration")
+        }
+    }
 }

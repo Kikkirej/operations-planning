@@ -40,13 +40,13 @@ class SecurityConfig(private val adminServer: AdminServerProperties) {
             }
             .oauth2Login { oauth2 ->
                 oauth2
-                    .loginPage(adminServer.path("/login"))
+                    .loginPage("/oauth2/authorization/keycloak")
                     .successHandler(successHandler)
             }
             .logout { logout ->
                 logout
                     .logoutUrl(adminServer.path("/logout"))
-                    .logoutSuccessUrl(adminServer.path("/login"))
+                    .logoutSuccessUrl("/oauth2/authorization/keycloak")
             }
             .csrf { csrf ->
                 csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())

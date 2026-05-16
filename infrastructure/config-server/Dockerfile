@@ -4,12 +4,15 @@ WORKDIR /workspace
 COPY gradle/ gradle/
 COPY build.gradle.kts settings.gradle.kts ./
 COPY infrastructure/config-server/build.gradle.kts infrastructure/config-server/build.gradle.kts
+# Resolve and cache all dependencies before copying source — keeps this layer cached when only src changes
+RUN gradle :infrastructure:config-server:dependencies --no-daemon
 COPY infrastructure/config-server/src infrastructure/config-server/src
 RUN gradle :infrastructure:config-server:bootJar --no-daemon --parallel
 
 # Stage 2: Test — run the full test suite (CI gate)
 # docker build --target test -f infrastructure/config-server/Dockerfile .
 FROM builder AS test
+ENV SKIP_DOCKER_TESTS=true
 RUN gradle :infrastructure:config-server:test --no-daemon --parallel
 
 # Stage 3: Runtime — minimal JRE image, non-root user

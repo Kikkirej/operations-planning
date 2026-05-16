@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "neo4j.fullname" . }}
+  labels:
+    app: {{ include "neo4j.fullname" . }}
+spec:
+  type: ClusterIP
+  selector:
+    app: {{ include "neo4j.fullname" . }}
+  ports:
+    - port: {{ .Values.boltPort }}
+      targetPort: {{ .Values.boltPort }}
+      protocol: TCP
+      name: bolt
+    {{- if .Values.browserEnabled }}
+    - port: {{ .Values.browserPort }}
+      targetPort: {{ .Values.browserPort }}
+      protocol: TCP
+      name: browser
+    {{- end }}

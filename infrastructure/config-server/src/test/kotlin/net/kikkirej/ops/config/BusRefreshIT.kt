@@ -2,6 +2,7 @@ package net.kikkirej.ops.config
 
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.springframework.boot.test.context.SpringBootTest
@@ -10,16 +11,15 @@ import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
 import org.springframework.http.RequestEntity
+import org.springframework.kafka.test.context.EmbeddedKafka
+import org.springframework.test.context.TestPropertySource
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.client.exchange
-import org.testcontainers.containers.KafkaContainer
-import org.testcontainers.junit.jupiter.Container
-import org.testcontainers.junit.jupiter.Testcontainers
-import org.testcontainers.utility.DockerImageName
 import java.io.File
 import java.net.URI
 import java.util.Base64
 
+@Tag("integration")
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
     properties = [
@@ -27,17 +27,12 @@ import java.util.Base64
         "spring.cloud.config.server.native.search-locations=file:\${config.repo.path}",
         "spring.security.user.name=testuser",
         "spring.security.user.password=testpass",
-        "eureka.client.enabled=false"
+        "eureka.client.enabled=false",
+        "spring.kafka.bootstrap-servers=\${spring.embedded.kafka.brokers}"
     ]
 )
-@Testcontainers
+@EmbeddedKafka(partitions = 1, topics = ["springCloudBus"])
 class BusRefreshIT {
-
-    companion object {
-        @Container
-        @JvmStatic
-        val kafka = KafkaContainer(DockerImageName.parse("apache/kafka:3.9.0"))
-    }
 
     @LocalServerPort
     private var port: Int = 0
@@ -54,7 +49,6 @@ class BusRefreshIT {
 
     @Test
     fun `busrefresh endpoint accepts POST with Basic auth`() {
-        System.setProperty("spring.kafka.bootstrap-servers", kafka.bootstrapServers)
         System.setProperty("config.repo.path", configDir.absolutePath)
 
         val req = RequestEntity<Void>(basicAuth(), HttpMethod.POST, URI("http://localhost:$port/actuator/busrefresh"))
@@ -84,7 +78,6 @@ class BusRefreshIT {
             .headers(basicAuth())
             .build()
         val resp = runCatching { rest.exchange<Map<*, *>>(req) }
-        // Verify bus is configured — endpoint may not exist but bus destination should be configured
         resp.isSuccess shouldBe true
     }
 }

@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "neo4j.fullname" . }}
+  labels:
+    app: {{ include "neo4j.fullname" . }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ include "neo4j.fullname" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "neo4j.fullname" . }}
+    spec:
+      containers:
+        - name: neo4j
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: NEO4J_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.auth.existingSecret | default (include "neo4j.fullname" .) }}
+                  key: {{ .Values.auth.secretKey }}
+            - name: NEO4J_AUTH
+              value: "neo4j/$(NEO4J_PASSWORD)"
+          lifecycle:
+            postStart:
+              exec:
+                command:
+                  - sh
+                  - -c
+                  - |
+                    retries=60
+                    until cypher-shell -a "bolt://localhost:{{ .Values.boltPort }}" \
+                          -u neo4j -p "${NEO4J_PASSWORD}" "RETURN 1;" > /dev/null 2>&1; do
+                      retries=$((retries - 1))
+                      [ "$retries" -le 0 ] && exit 0
+                      sleep 2
+                    done
+                    cypher-shell -a "bolt://localhost:{{ .Values.boltPort }}" \
+                      -u neo4j -p "${NEO4J_PASSWORD}" \
+                      "CREATE CONSTRAINT entity_uuid_unique IF NOT EXISTS FOR (e:Entity) REQUIRE e.uuid IS UNIQUE;" || true
+          ports:
+            - containerPort: {{ .Values.boltPort }}
+              name: bolt
+            - containerPort: {{ .Values.browserPort }}
+              name: browser
+          livenessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.browserPort }}
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.browserPort }}
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            requests:
+              cpu: {{ .Values.resources.requests.cpu }}
+              memory: {{ .Values.resources.requests.memory }}
+            limits:
+              cpu: {{ .Values.resources.limits.cpu }}
+              memory: {{ .Values.resources.limits.memory }}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "neo4j.fullname" . }}

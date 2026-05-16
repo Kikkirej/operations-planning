@@ -38,6 +38,8 @@ following keys are reserved for infrastructure use:
 | `event-bus` | `kafka` (not an Eureka client) | Kafka event streaming is available; detected via Kafka bootstrap connectivity, not Eureka |
 | `tracing` | `jaeger` (optional profile) | Distributed tracing backend is available; services MAY activate OTLP export when this capability is present |
 | `log-aggregation` | `logstash` (optional profile) | Centralised log aggregation is available; services MAY activate log shipping when present |
+| `relational-data` | `app-postgres` (not an Eureka client) | Shared application PostgreSQL is available; services detect availability via connection retry on `app-postgres:5432` |
+| `graph-data` | `neo4j` (not an Eureka client) | Shared Neo4j graph database is available; services detect availability via Bolt connection retry on `neo4j:7687` |
 
 ---
 
@@ -59,3 +61,11 @@ following keys are reserved for infrastructure use:
 - The `tracing` and `log-aggregation` capability keys are only published when the
   `observability` Docker Compose profile is active or the corresponding Helm values
   are enabled.
+- **`relational-data`** (`app-postgres`): PostgreSQL does not register with Eureka.
+  Services detect availability by attempting a TCP connection to `app-postgres:5432`
+  with retry backoff. On failure, services MUST fail fast with a clear DB connection
+  error — they MUST NOT start with in-memory or empty state (spec FR-002 edge case).
+- **`graph-data`** (`neo4j`): Neo4j does not register with Eureka. Services detect
+  availability by attempting a Bolt connection to `neo4j:7687` with retry backoff.
+  On failure, services MUST surface a clear error on any graph operation — they MUST
+  NOT silently skip relationship registration (spec edge case).

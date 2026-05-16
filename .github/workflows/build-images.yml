@@ -16,6 +16,13 @@ jobs:
     strategy:
       matrix:
         service: [eureka, config-server, spring-boot-admin]
+        include:
+          - service: test-runner
+            test_only: true
+          - service: config-server
+            has_integration_tests: true
+          - service: spring-boot-admin
+            has_integration_tests: true
       fail-fast: false
     permissions:
       contents: read
@@ -45,10 +52,30 @@ jobs:
             -f infrastructure/${{ matrix.service }}/Dockerfile \
             .
 
+      - name: Set up JDK 21
+        if: ${{ matrix.has_integration_tests }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Set up Gradle
+        if: ${{ matrix.has_integration_tests }}
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.13'
+
+      - name: Run integration tests
+        if: ${{ matrix.has_integration_tests }}
+        run: |
+          gradle :infrastructure:${{ matrix.service }}:test --no-daemon -PonlyIntegration=true
+
       - name: Compute image tags
         id: meta
+        if: ${{ !matrix.test_only }}
         run: |
           REF="${{ github.ref_name }}"
+          REF="${REF//\//-}"
           IMAGE="${{ env.IMAGE_PREFIX }}/${{ matrix.service }}"
           TAGS="${IMAGE}:${REF}"
           if [ "${REF}" = "main" ]; then
@@ -57,6 +84,7 @@ jobs:
           echo "tags=${TAGS}" >> "$GITHUB_OUTPUT"
 
       - name: Build and push runtime image
+        if: ${{ !matrix.test_only }}
         uses: docker/build-push-action@v5
         with:
           context: .
