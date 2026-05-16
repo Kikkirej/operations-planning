@@ -24,8 +24,7 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
-    testImplementation(libs.testcontainers.junit.jupiter)
-    testImplementation(libs.testcontainers.kafka)
+    testImplementation("org.springframework.kafka:spring-kafka-test")
     testImplementation(libs.kotest.runner.junit5)
     testImplementation(libs.kotest.assertions.core)
     testImplementation(libs.kotest.extensions.spring)

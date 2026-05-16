@@ -11,15 +11,11 @@ import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
 import org.springframework.http.RequestEntity
-import org.springframework.test.context.DynamicPropertyRegistry
-import org.springframework.test.context.DynamicPropertySource
+import org.springframework.kafka.test.context.EmbeddedKafka
+import org.springframework.test.context.TestPropertySource
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.client.exchange
-import org.testcontainers.junit.jupiter.Container
-import org.testcontainers.junit.jupiter.Testcontainers
-import org.testcontainers.kafka.KafkaContainer
 import java.io.File
-import java.time.Duration
 import java.net.URI
 import java.util.Base64
 
@@ -31,24 +27,12 @@ import java.util.Base64
         "spring.cloud.config.server.native.search-locations=file:\${config.repo.path}",
         "spring.security.user.name=testuser",
         "spring.security.user.password=testpass",
-        "eureka.client.enabled=false"
+        "eureka.client.enabled=false",
+        "spring.kafka.bootstrap-servers=\${spring.embedded.kafka.brokers}"
     ]
 )
-@Testcontainers
+@EmbeddedKafka(partitions = 1, topics = ["springCloudBus"])
 class BusRefreshIT {
-
-    companion object {
-        @Container
-        @JvmStatic
-        val kafka = KafkaContainer("apache/kafka:3.9.0")
-                .withStartupTimeout(Duration.ofMinutes(2))
-
-        @DynamicPropertySource
-        @JvmStatic
-        fun kafkaProperties(registry: DynamicPropertyRegistry) {
-            registry.add("spring.kafka.bootstrap-servers") { kafka.bootstrapServers }
-        }
-    }
 
     @LocalServerPort
     private var port: Int = 0
@@ -94,7 +78,6 @@ class BusRefreshIT {
             .headers(basicAuth())
             .build()
         val resp = runCatching { rest.exchange<Map<*, *>>(req) }
-        // Verify bus is configured — endpoint may not exist but bus destination should be configured
         resp.isSuccess shouldBe true
     }
 }
