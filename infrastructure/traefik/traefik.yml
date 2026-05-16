@@ -20,7 +20,7 @@ providers:
   docker:
     endpoint: "unix:///var/run/docker.sock"
     watch: true
-    network: app-net
+    network: compose_app-net
     exposedByDefault: false
   file:
     directory: /etc/traefik/dynamic
