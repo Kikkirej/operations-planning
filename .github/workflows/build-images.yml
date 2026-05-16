@@ -75,6 +75,7 @@ jobs:
         if: ${{ !matrix.test_only }}
         run: |
           REF="${{ github.ref_name }}"
+          REF="${REF//\//-}"
           IMAGE="${{ env.IMAGE_PREFIX }}/${{ matrix.service }}"
           TAGS="${IMAGE}:${REF}"
           if [ "${REF}" = "main" ]; then
