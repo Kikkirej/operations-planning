@@ -5,14 +5,24 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.boot.test.web.server.LocalServerPort
 import org.springframework.context.annotation.Import
 import org.springframework.http.HttpStatus
+import org.springframework.security.oauth2.jwt.JwtDecoder
 import org.springframework.web.client.RestTemplate
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(
+    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+    properties = ["spring.main.allow-bean-definition-overriding=true"]
+)
 @Import(TestSecurityConfig::class)
 class EurekaRegistrationIT {
+
+    // Replaces the auto-configured NimbusJwtDecoder so no OIDC discovery HTTP call is made
+    // to Keycloak at startup. The TestSecurityConfig permits all, so this mock is never invoked.
+    @MockBean
+    private lateinit var jwtDecoder: JwtDecoder
 
     @LocalServerPort
     private var port: Int = 0

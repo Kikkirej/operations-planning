@@ -15,10 +15,9 @@ import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.client.exchange
-import org.testcontainers.containers.KafkaContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
-import org.testcontainers.utility.DockerImageName
+import org.testcontainers.kafka.KafkaContainer
 import java.io.File
 import java.net.URI
 import java.util.Base64
@@ -40,7 +39,7 @@ class BusRefreshIT {
     companion object {
         @Container
         @JvmStatic
-        val kafka = KafkaContainer(DockerImageName.parse("apache/kafka:3.9.0"))
+        val kafka = KafkaContainer("apache/kafka:3.9.0")
 
         @DynamicPropertySource
         @JvmStatic
