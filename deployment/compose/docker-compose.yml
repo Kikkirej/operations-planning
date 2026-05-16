@@ -49,7 +49,7 @@ services:
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
       KC_PROXY_HEADERS: xforwarded
-      KC_HOSTNAME: auth.ops.local
+      KC_HOSTNAME: https://auth.ops.local
       KC_HOSTNAME_STRICT: "false"
       KC_HTTP_ENABLED: "true"
     labels:

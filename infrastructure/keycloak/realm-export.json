@@ -105,7 +105,7 @@
       },
       {
         "name": "platform-user",
-        "description": "General platform user — read-only access to platform services"
+        "description": "General platform user \u2014 read-only access to platform services"
       }
     ]
   },
@@ -123,8 +123,13 @@
           "temporary": true
         }
       ],
-      "requiredActions": ["UPDATE_PASSWORD"],
-      "realmRoles": ["sba-admin", "platform-user"]
+      "requiredActions": [
+        "UPDATE_PASSWORD"
+      ],
+      "realmRoles": [
+        "sba-admin",
+        "platform-user"
+      ]
     }
   ],
   "requiredActions": [
@@ -148,5 +153,8 @@
     }
   ],
   "scopeMappings": [],
-  "clientScopeMappings": {}
+  "clientScopeMappings": {},
+  "attributes": {
+    "frontendUrl": "https://auth.ops.local"
+  }
 }
