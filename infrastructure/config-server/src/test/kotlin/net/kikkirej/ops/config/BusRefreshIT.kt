@@ -2,6 +2,7 @@ package net.kikkirej.ops.config
 
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.springframework.boot.test.context.SpringBootTest
@@ -22,6 +23,7 @@ import java.io.File
 import java.net.URI
 import java.util.Base64
 
+@Tag("integration")
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
     properties = [

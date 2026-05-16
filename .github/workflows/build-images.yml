@@ -19,6 +19,10 @@ jobs:
         include:
           - service: test-runner
             test_only: true
+          - service: config-server
+            has_integration_tests: true
+          - service: spring-boot-admin
+            has_integration_tests: true
       fail-fast: false
     permissions:
       contents: read
@@ -47,6 +51,24 @@ jobs:
             --cache-to   type=gha,scope=${{ matrix.service }}-test,mode=max \
             -f infrastructure/${{ matrix.service }}/Dockerfile \
             .
+
+      - name: Set up JDK 21
+        if: ${{ matrix.has_integration_tests }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Set up Gradle
+        if: ${{ matrix.has_integration_tests }}
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.13'
+
+      - name: Run integration tests
+        if: ${{ matrix.has_integration_tests }}
+        run: |
+          gradle :infrastructure:${{ matrix.service }}:test --no-daemon -PonlyIntegration=true
 
       - name: Compute image tags
         id: meta

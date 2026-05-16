@@ -32,5 +32,12 @@ dependencies {
 }
 
 tasks.withType<Test> {
-    useJUnitPlatform()
+    useJUnitPlatform {
+        val skipDockerTests = System.getenv("SKIP_DOCKER_TESTS") == "true"
+        val onlyIntegration = project.hasProperty("onlyIntegration")
+        when {
+            onlyIntegration -> includeTags("integration")
+            skipDockerTests -> excludeTags("integration")
+        }
+    }
 }

@@ -6,13 +6,12 @@ import io.kotest.matchers.shouldNotBe
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.web.server.LocalServerPort
+import org.springframework.context.annotation.Import
 import org.springframework.http.HttpStatus
 import org.springframework.web.client.RestTemplate
-import org.testcontainers.junit.jupiter.Testcontainers
-import java.time.Duration
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Testcontainers
+@Import(TestSecurityConfig::class)
 class EurekaRegistrationIT {
 
     @LocalServerPort

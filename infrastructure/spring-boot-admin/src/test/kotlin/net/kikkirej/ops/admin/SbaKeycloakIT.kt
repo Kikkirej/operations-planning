@@ -2,22 +2,25 @@ package net.kikkirej.ops.admin
 
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.web.server.LocalServerPort
 import org.springframework.http.HttpStatus
+import org.springframework.test.context.DynamicPropertyRegistry
+import org.springframework.test.context.DynamicPropertySource
 import org.springframework.web.client.RestTemplate
 import org.testcontainers.containers.GenericContainer
 import org.testcontainers.containers.wait.strategy.Wait
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 
+@Tag("integration")
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
     properties = [
         "spring.security.oauth2.client.registration.keycloak.client-id=spring-boot-admin",
         "spring.security.oauth2.client.registration.keycloak.client-secret=test-secret",
-        "spring.security.oauth2.client.provider.keycloak.issuer-uri=http://localhost:\${keycloak.port}/realms/operations",
         "eureka.client.enabled=false"
     ]
 )
@@ -33,6 +36,17 @@ class SbaKeycloakIT {
             .withEnv("KEYCLOAK_ADMIN_PASSWORD", "admin")
             .withCommand("start-dev")
             .waitingFor(Wait.forHttp("/realms/master").forStatusCode(200))
+
+        @DynamicPropertySource
+        @JvmStatic
+        fun keycloakProperties(registry: DynamicPropertyRegistry) {
+            // Use master realm (exists by default in start-dev); tests validate redirect behaviour
+            // not realm-specific content. keycloak.port retained for direct URL assertions.
+            registry.add("keycloak.port") { keycloak.getMappedPort(8080) }
+            registry.add("spring.security.oauth2.client.provider.keycloak.issuer-uri") {
+                "http://localhost:${keycloak.getMappedPort(8080)}/realms/master"
+            }
+        }
     }
 
     @LocalServerPort

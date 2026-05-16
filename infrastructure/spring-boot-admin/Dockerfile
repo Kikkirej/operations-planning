@@ -10,6 +10,7 @@ RUN gradle :infrastructure:spring-boot-admin:bootJar --no-daemon --parallel
 # Stage 2: Test — run the full test suite (CI gate)
 # docker build --target test -f infrastructure/spring-boot-admin/Dockerfile .
 FROM builder AS test
+ENV SKIP_DOCKER_TESTS=true
 RUN gradle :infrastructure:spring-boot-admin:test --no-daemon --parallel
 
 # Stage 3: Runtime — minimal JRE image, non-root user

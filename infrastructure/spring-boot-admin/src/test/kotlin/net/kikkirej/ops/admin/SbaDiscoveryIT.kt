@@ -5,10 +5,21 @@ import io.kotest.matchers.shouldNotBe
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.web.server.LocalServerPort
+import org.springframework.context.annotation.Import
 import org.springframework.http.HttpStatus
 import org.springframework.web.client.RestTemplate
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(
+    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+    properties = [
+        "spring.security.oauth2.client.registration.keycloak.client-secret=test-secret",
+        "spring.security.oauth2.client.provider.keycloak.issuer-uri=",
+        "spring.security.oauth2.client.provider.keycloak.authorization-uri=http://localhost:9999/auth",
+        "spring.security.oauth2.client.provider.keycloak.token-uri=http://localhost:9999/token",
+        "eureka.client.enabled=false"
+    ]
+)
+@Import(TestSecurityConfig::class)
 class SbaDiscoveryIT {
 
     @LocalServerPort
