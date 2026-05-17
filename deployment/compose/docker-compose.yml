@@ -52,6 +52,7 @@ services:
       KC_HOSTNAME: https://auth.ops.local
       KC_HOSTNAME_STRICT: "false"
       KC_HTTP_ENABLED: "true"
+      KC_METRICS_ENABLED: "true"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.keycloak.rule=Host(`auth.ops.local`)"
@@ -268,8 +269,11 @@ services:
       - neo4j-data:/data
     environment:
       NEO4J_AUTH: neo4j/${NEO4J_PASSWORD}
+      NEO4J_server_metrics_prometheus_enabled: "true"
+      NEO4J_server_metrics_prometheus_endpoint: "0.0.0.0:2004"
     ports:
       - "7474:7474"
+      - "2004:2004"
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:7474 || exit 1"]
       interval: 10s
@@ -369,6 +373,37 @@ services:
       timeout: 10s
       retries: 5
       start_period: 60s
+    restart: unless-stopped
+
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:latest
+    profiles: [observability]
+    networks: [app-net]
+    command: ["--kafka.server=kafka:9092"]
+    ports:
+      - "9308:9308"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9308/metrics || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    profiles: [observability]
+    networks: [app-net]
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${APP_POSTGRES_USER}:${APP_POSTGRES_PASSWORD}@app-postgres:5432/${APP_POSTGRES_DB}?sslmode=disable"
+    ports:
+      - "9187:9187"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9187/metrics || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     restart: unless-stopped
 
   prometheus:
