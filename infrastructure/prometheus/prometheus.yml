@@ -15,11 +15,6 @@ scrape_configs:
     static_configs:
       - targets: ["traefik:8080"]
 
-  - job_name: keycloak
-    static_configs:
-      - targets: ["keycloak:9000"]
-    metrics_path: /metrics
-
   - job_name: eureka
     static_configs:
       - targets: ["eureka:8761"]
@@ -34,10 +29,6 @@ scrape_configs:
     static_configs:
       - targets: ["spring-boot-admin:8090"]
     metrics_path: /actuator/prometheus
-
-  - job_name: neo4j
-    static_configs:
-      - targets: ["neo4j:2004"]
 
   - job_name: kafka-exporter
     static_configs:
