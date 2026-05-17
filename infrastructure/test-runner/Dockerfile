@@ -22,5 +22,9 @@ FROM builder AS test
 RUN cypher-shell --version && psql --version
 
 FROM builder AS runtime
+USER root
+COPY infrastructure/certs/trust/local-ca.crt /usr/local/share/ca-certificates/platform-ca.crt
+RUN update-ca-certificates
+USER neo4j
 WORKDIR /workspace
 ENTRYPOINT ["sh"]

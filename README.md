@@ -31,17 +31,57 @@ The following infrastructure services are **always deployed** in every environme
 
 ## Quick Start (Local Development)
 
-```bash
-# Start the full infrastructure stack
-docker compose -f deployment/compose/docker-compose.yml up -d
+### 1. Run the setup script (first time only)
 
-# Verify all services are healthy
-docker compose -f deployment/compose/docker-compose.yml ps
+```bash
+cd deployment/compose
+./setup.sh
 ```
 
-All infrastructure services should be healthy within 2 minutes. See
-[`docs/infrastructure/`](docs/infrastructure/) for per-service startup and
-troubleshooting guides.
+This generates TLS certificates, copies `.env.example` → `.env`, validates secrets,
+and adds `/etc/hosts` entries for all `*.ops.local` domains. Takes under a minute.
+
+### 2. Fill in secrets
+
+Open `deployment/compose/.env` and replace every `CHANGE_ME_BEFORE_USE` value with a
+real secret. Run `./setup.sh --check` at any time to see which secrets are still missing.
+
+### 3. Start the stack
+
+```bash
+docker compose up --build
+```
+
+All infrastructure services are healthy within 2 minutes.
+
+### 4. Trust the certificate (one-time, browser only)
+
+```bash
+# Run from the repository root:
+# Firefox
+for dir in ~/.config/mozilla/firefox/*/; do
+  certutil -A -n "ops.local Dev CA" -t "CT,," \
+    -i infrastructure/certs/trust/local-ca.crt \
+    -d "sql:$dir"
+done
+# Restart Firefox
+```
+
+To renew the server cert later: `./deployment/compose/setup.sh --renew`
+To renew the CA (rare — requires image rebuild): `./deployment/compose/setup.sh --renew-ca`
+
+### Service URLs
+
+| Service | URL |
+|---------|-----|
+| Spring Boot Admin | https://admin.ops.local |
+| Keycloak | https://auth.ops.local |
+| Config Server | https://config.ops.local |
+| Eureka | http://localhost:8761 |
+| Traefik dashboard | http://localhost:8080 |
+
+For a full walkthrough of all PKI and secrets flows, see
+[`docs/infrastructure/pki/README.md`](docs/infrastructure/pki/README.md).
 
 ## Architecture Principles
 

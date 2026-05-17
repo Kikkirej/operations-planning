@@ -1,4 +1,0 @@
-# Ignore private keys — never commit TLS private keys
-*.pem
-# Allow the public cert
-!cert.pem
