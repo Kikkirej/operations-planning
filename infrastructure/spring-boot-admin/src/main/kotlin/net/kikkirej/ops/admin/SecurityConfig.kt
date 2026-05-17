@@ -31,6 +31,7 @@ class SecurityConfig(private val adminServer: AdminServerProperties) {
                     .requestMatchers(
                         AntPathRequestMatcher(adminServer.path("/actuator/health")),
                         AntPathRequestMatcher(adminServer.path("/actuator/info")),
+                        AntPathRequestMatcher(adminServer.path("/actuator/prometheus")),
                         AntPathRequestMatcher(adminServer.path("/login")),
                         AntPathRequestMatcher(adminServer.path("/assets/**")),
                         AntPathRequestMatcher(adminServer.path("/*.js")),
