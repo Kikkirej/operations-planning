@@ -11,8 +11,45 @@ env:
   IMAGE_PREFIX: ghcr.io/kikkirej/ops
 
 jobs:
+  check-certs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check certificate expiry
+        run: |
+          WARN_DAYS=30
+          FAIL=0
+
+          check_cert() {
+            local cert="$1"
+            local label="$2"
+            if [ ! -f "$cert" ]; then
+              echo "SKIP: $label not found (gitignored or not yet generated)"
+              return
+            fi
+            expiry=$(openssl x509 -enddate -noout -in "$cert" | cut -d= -f2)
+            expiry_epoch=$(date -d "$expiry" +%s 2>/dev/null || date -j -f "%b %e %T %Y %Z" "$expiry" +%s 2>/dev/null)
+            now_epoch=$(date +%s)
+            days=$(( (expiry_epoch - now_epoch) / 86400 ))
+            if [ "$days" -le "$WARN_DAYS" ]; then
+              echo "FAIL: $label expires in $days day(s) (on $expiry)"
+              echo "      Renew locally with ./setup.sh --renew (or --renew-ca for CA) and commit local-ca.crt"
+              FAIL=1
+            else
+              echo "OK:   $label valid for $days more day(s) (expires $expiry)"
+            fi
+          }
+
+          check_cert "infrastructure/certs/trust/local-ca.crt" "platform CA"
+          check_cert "infrastructure/certs/server/local.crt"   "server cert"
+
+          [ "$FAIL" -eq 0 ] || exit 1
+
   build:
     runs-on: ubuntu-latest
+    needs: check-certs
     strategy:
       matrix:
         service: [eureka, config-server, spring-boot-admin]

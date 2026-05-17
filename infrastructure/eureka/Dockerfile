@@ -16,6 +16,12 @@ RUN gradle :infrastructure:eureka:test --no-daemon --parallel
 
 # Stage 3: Runtime — minimal JRE image, non-root user
 FROM eclipse-temurin:21-jre-alpine AS runtime
+COPY infrastructure/certs/trust/local-ca.crt /tmp/platform-ca.crt
+RUN keytool -importcert -noprompt -alias platform-ca \
+    -file /tmp/platform-ca.crt \
+    -keystore "$JAVA_HOME/lib/security/cacerts" \
+    -storepass changeit && \
+    rm /tmp/platform-ca.crt
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup -u 1001
 USER 1001
 WORKDIR /app
