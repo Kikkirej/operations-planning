@@ -108,7 +108,7 @@
 - [x] T025 [P] Verify `README.md` Quick Start section accurately reflects the final `setup.sh` interface (flags, output, URLs) — update any discrepancies from implementation
 - [x] T026 [P] Run `./setup.sh --check` on a fully configured environment and confirm output is "0 secrets missing" with no warnings
 - [x] T027 [P] Run `docker compose up --build` and verify all 7 infrastructure services reach healthy state; record any timing issues in `docs/infrastructure/pki/README.md`
-- [ ] T028 Commit `specs/004-zero-trust-pki/` artifacts and all implementation changes in a single PR; verify `docker build --target test` passes for eureka, config-server, and spring-boot-admin before raising PR
+- [x] T028 Commit `specs/004-zero-trust-pki/` artifacts and all implementation changes in a single PR; verify `docker build --target test` passes for eureka, config-server, and spring-boot-admin before raising PR
 
 ---
 
