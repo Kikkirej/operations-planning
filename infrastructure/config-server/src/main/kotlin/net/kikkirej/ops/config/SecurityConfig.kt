@@ -1,4 +1,4 @@
-package net.kikkirej.ops.eureka
+package net.kikkirej.ops.config
 
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -17,12 +17,9 @@ class SecurityConfig {
             .authorizeHttpRequests { auth ->
                 auth
                     .requestMatchers("/actuator/health", "/actuator/info", "/actuator/prometheus").permitAll()
-                    .requestMatchers("/eureka/**").authenticated()
                     .anyRequest().authenticated()
             }
-            .oauth2ResourceServer { oauth2 ->
-                oauth2.jwt { }
-            }
+            .httpBasic { }
             .sessionManagement { session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             }

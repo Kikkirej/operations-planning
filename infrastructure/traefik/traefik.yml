@@ -35,3 +35,12 @@ log:
   level: INFO
 
 accessLog: {}
+
+metrics:
+  prometheus: {}
+
+tracing:
+  otlp:
+    grpc:
+      endpoint: jaeger:4317
+      insecure: true

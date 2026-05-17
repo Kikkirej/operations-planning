@@ -36,7 +36,13 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,busrefresh,env
+        include: health,info,busrefresh,env,prometheus
   endpoint:
     health:
       show-details: always
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: http://jaeger:4318/v1/traces

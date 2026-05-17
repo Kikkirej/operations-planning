@@ -295,7 +295,7 @@ services:
   # ── Observability profile ─────────────────────────────────────────────────────
 
   jaeger:
-    image: jaegertracing/all-in-one:2
+    image: jaegertracing/all-in-one:latest
     profiles: [observability]
     networks: [app-net]
     ports:
@@ -369,6 +369,37 @@ services:
       timeout: 10s
       retries: 5
       start_period: 60s
+    restart: unless-stopped
+
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:latest
+    profiles: [observability]
+    networks: [app-net]
+    command: ["--kafka.server=kafka:9092"]
+    ports:
+      - "9308:9308"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9308/metrics || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    profiles: [observability]
+    networks: [app-net]
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${APP_POSTGRES_USER}:${APP_POSTGRES_PASSWORD}@app-postgres:5432/${APP_POSTGRES_DB}?sslmode=disable"
+    ports:
+      - "9187:9187"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9187/metrics || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     restart: unless-stopped
 
   prometheus:
