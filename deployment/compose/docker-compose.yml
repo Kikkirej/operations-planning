@@ -38,7 +38,7 @@ services:
     depends_on:
       keycloak-postgres:
         condition: service_healthy
-    command: ["start-dev", "--import-realm"]
+    command: ["start", "--import-realm"]
     volumes:
       - ../../infrastructure/keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
     environment:
@@ -49,9 +49,10 @@ services:
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
       KC_PROXY_HEADERS: xforwarded
-      KC_HOSTNAME: https://auth.ops.local
-      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME: auth.ops.local
       KC_HTTP_ENABLED: "true"
+      KC_METRICS_ENABLED: "true"
+      KC_HEALTH_ENABLED: "true"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.keycloak.rule=Host(`auth.ops.local`)"
@@ -61,13 +62,13 @@ services:
       - "traefik.http.middlewares.keycloak-proto.headers.customrequestheaders.X-Forwarded-Proto=https"
       - "traefik.http.services.keycloak.loadbalancer.server.port=8080"
     healthcheck:
-      # keycloak/keycloak:26.x is ubi-micro (no curl/wget); start-dev disables the management
-      # port, so /health/ready is unavailable. Use /realms/master as a functional readiness check.
-      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/localhost/8080 && printf \"GET /realms/master HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n\" >&3 && read -r -t 5 status <&3 && echo \"$$status\" | grep -q 200' 2>/dev/null || exit 1"]
+      # ubi-micro has no curl/wget; use bash TCP trick against management port 9000 (/health/ready)
+      # which is only active in production (start) mode.
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/localhost/9000 && printf \"GET /health/ready HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n\" >&3 && read -r -t 5 status <&3 && echo \"$$status\" | grep -q 200' 2>/dev/null || exit 1"]
       interval: 15s
       timeout: 10s
       retries: 10
-      start_period: 90s
+      start_period: 120s
     restart: unless-stopped
 
   # ── Eureka ────────────────────────────────────────────────────────────────────
