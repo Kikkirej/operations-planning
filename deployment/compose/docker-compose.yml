@@ -295,7 +295,7 @@ services:
   # ── Observability profile ─────────────────────────────────────────────────────
 
   jaeger:
-    image: jaegertracing/all-in-one:2
+    image: jaegertracing/all-in-one:latest
     profiles: [observability]
     networks: [app-net]
     ports:
